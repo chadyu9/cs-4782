@@ -1,0 +1,102 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{fullpage}
+\usepackage{enumerate}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[colorlinks,allcolors=RoyalBlue]{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{tkz-base}
+\usepackage{tkz-euclide}
+\usepackage{comment}
+
+\usepackage[T1]{fontenc}
+% \usepackage{palatino}
+\usepackage{libertine, libertinust1math}
+\usepackage{titlesec}
+% \usepackage{newtxtext,newtxmath}
+% \usepackage{kpfonts}
+
+\renewcommand{\familydefault}{\sfdefault}
+\renewcommand{\sfdefault}{LinuxLibertineT-TLF}
+
+
+% For environments and alias
+\usepackage{amsthm}
+\usepackage{mdframed}
+\usepackage{mathtools}
+\usepackage{cleveref}
+\newmdtheoremenv{assumption}{Assumption}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\loss}[1]{\mathcal{L}_\text{#1}}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\cO}{\mathcal{O}}
+\newcommand{\ctO}{\Tilde{\cO}}
+\newcommand{\mdot}{\:\cdot\:}
+\newcommand{\jacf}{\nabla f}
+\newcommand{\hesf}{\nabla^2 f}
+
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\w}{\mathbf{w}}
+
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1,#2}
+\DeclarePairedDelimiter{\Set}{\lbrace}{\rbrace}
+\DeclarePairedDelimiter{\abs}{|}{|}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\paren}{(}{)}
+\DeclarePairedDelimiter{\bracket}{[}{]}
+\DeclarePairedDelimiter{\curly}{\lbrace}{\rbrace}
+\DeclarePairedDelimiter{\card}{|}{|}
+\DeclarePairedDelimiter{\norms}{\lVert}{\rVert^2}
+\DeclarePairedDelimiter{\fnorm}{\lVert}{\rVert_F}
+\DeclarePairedDelimiter{\infnorm}{\lVert}{\rVert_\infty}
+
+\newcommand{\mincurly}[1]{\min\curly*{#1}}
+\newcommand{\maxcurly}[1]{\max\curly*{#1}}
+\newcommand{\Exv}[1]{\E\bracket*{#1}}
+\newcommand{\bigO}[1]{\cO\paren*{#1}}
+\newcommand{\bigtO}[1]{\ctO\paren*{#1}}
+\newcommand{\prob}[1]{P\paren*{#1}}
+\newcommand{\condprob}[2]{P\paren*{#1\mid#2}}
+
+\newenvironment{solution}{
+    \color{Red}
+    \textbf{Solution:}
+}
+
+\title{CS 4782 Coding Assignment 1 Written Responses\vspace{-10pt}}
+\author{Due: 2/13/25 11:59 PM on Gradescope}
+\date{Late submissions accepted until 2/15/25 11:59 PM}
+
+\begin{document}
+    \maketitle
+    \textbf{Note: For homework, you can work in teams of up to 2 people. Please include your teammates’ NetIDs and names on the front page and form a group on Gradescope. }
+\maketitle
+\section*{Problem 1:}
+
+Note down anything you have observed from your experiment with learning rates (one or two sentences will suffice). Include an image of the plots being referenced in this question. 
+
+
+\section*{Problem 2:}
+
+
+What do you notice about the loss graphs and the differences between the five models you have implemented? Write 2-3 sentences. Include an image of the plots referenced in this question.
+
+
+\end{document}

@@ -48,7 +48,19 @@ def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, dev
 
     for epoch in range(epochs):
         # TODO: write a training loop
-        pass
+
+        # Zero out the gradients of the model
+        # Perform a forward pass through the model.
+        # Compute the loss using the specified criterion.
+        # Perform the backward pass.
+        # Update the model parameters using the optimizer.
+
+        for _, (inputs, targets) in enumerate(data_loader):
+            optimizer.zero_grad()
+            output = model(inputs)
+            loss = criterion(output, targets)
+            loss.backward()
+            optimizer.step()
         # END TODO
 
     print("Training finished.")

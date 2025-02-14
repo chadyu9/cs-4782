@@ -48,18 +48,24 @@ def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, dev
 
     for epoch in range(epochs):
         # TODO: write a training loop
+
+        batch_training_loss = 0.0
+
         for _, (inputs, targets) in enumerate(data_loader):
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, targets)
-            train_loss_arr.append(loss.item())
+            batch_training_loss += loss.item() / inputs.size(0)
             loss.backward()
             optimizer.step()
+        train_loss_arr.append(batch_training_loss)
 
+        batch_val_loss = 0.0
         for _, (inputs, targets) in enumerate(val_data_loader):
             outputs = model(inputs)
             val_loss = criterion(outputs, targets)
-            val_loss_arr.append(val_loss.item())
+            batch_val_loss += val_loss.item() / inputs.size(0)
+        val_loss_arr.append(batch_val_loss)
         # END TODO
 
     print("Training finished.")

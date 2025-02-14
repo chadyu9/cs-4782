@@ -22,9 +22,9 @@ def val(model, val_data_loader, criterion, device):
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             val_running_loss += loss.item()
-            
+
     model.train()
-    return val_running_loss/len(val_data_loader)
+    return val_running_loss / len(val_data_loader)
 
 
 def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, device):
@@ -48,19 +48,18 @@ def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, dev
 
     for epoch in range(epochs):
         # TODO: write a training loop
-
-        # Zero out the gradients of the model
-        # Perform a forward pass through the model.
-        # Compute the loss using the specified criterion.
-        # Perform the backward pass.
-        # Update the model parameters using the optimizer.
-
         for _, (inputs, targets) in enumerate(data_loader):
             optimizer.zero_grad()
-            output = model(inputs)
-            loss = criterion(output, targets)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            train_loss_arr.append(loss.item())
             loss.backward()
             optimizer.step()
+
+        for _, (inputs, targets) in enumerate(val_data_loader):
+            outputs = model(inputs)
+            val_loss = criterion(outputs, targets)
+            val_loss_arr.append(val_loss.item())
         # END TODO
 
     print("Training finished.")
@@ -84,13 +83,33 @@ class ConvNet(nn.Module):
     def __init__(self, num_classes=4):
         super(ConvNet, self).__init__()
         # TODO: define the network
+        self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
+        self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
+        self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
+        self.fc1 = nn.Linear(8 * 8 * 32, 1024)
+        self.fc2 = nn.Linear(1024, 4)
+        self.layers = [
+            self.conv1,
+            nn.ReLU(),
+            self.conv2,
+            nn.ReLU(),
+            self.conv3,
+            nn.ReLU(),
+            lambda x: x.view(x.size(0), -1),
+            self.fc1,
+            nn.ReLU(),
+            self.fc2,
+        ]
         # END TODO
 
     def forward(self, x):
         # TODO: create a convnet forward pass
+        for layer in self.layers:
+            x = layer(x)
         # END TODO
 
         return x
+
 
 class ConvNetMaxPooling(nn.Module):
     """
@@ -125,7 +144,7 @@ class BatchNormalization(nn.Module):
         self.momentum = momentum
         self.weights = nn.Parameter(torch.ones(num_features))
         self.bias = nn.Parameter(torch.zeros(num_features))
-        # We use register buffers so that these tensors move with the model to 
+        # We use register buffers so that these tensors move with the model to
         # the correct device
         self.register_buffer("running_mean", torch.zeros(num_features))
         self.register_buffer("running_var", torch.ones(num_features))
@@ -139,7 +158,7 @@ class BatchNormalization(nn.Module):
 
         OUTPUT:
         - x (Tensor of shape (B, C, H, W): The output tensor after normalization.
-                        
+
         DIMENSIONS:
             - B (Batch size): The number of samples in the batch.
             - C (Channels): The number of feature channels (e.g., 3 for RGB images).
@@ -147,7 +166,7 @@ class BatchNormalization(nn.Module):
             - W (Width): The width of each image or feature map.
 
         These variable names (B, C, H, W) are commonly used conventions in PyTorch
-        
+
         """
         # Hint: You need to understand broadcasting in Pytorch! https://pytorch.org/docs/stable/notes/broadcasting.html
         # The mean and variance vector should be of shape (1, C, 1, 1)
@@ -273,8 +292,7 @@ class ResNet(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
         self.last = nn.Sequential(
-            nn.AdaptiveAvgPool2d(
-                (1, 1)), nn.Flatten(), nn.LazyLinear(num_classes)
+            nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(), nn.LazyLinear(num_classes)
         )
         # initialize two layers called layer1 and layer2 with num_blocks residual blocks each.
 

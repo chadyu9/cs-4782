@@ -122,19 +122,21 @@ class ConvNetMaxPooling(nn.Module):
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
         self.layers = [
             self.conv1,
             nn.ReLU(),
-            self.pool,
+            self.pool1,
             self.conv2,
             nn.ReLU(),
-            self.pool,
+            self.pool2,
             self.conv3,
             nn.ReLU(),
-            self.pool,
+            self.pool3,
             lambda x: x.view(x.size(0), -1),
             self.fc1,
             nn.ReLU(),
@@ -236,7 +238,9 @@ class ConvNetBN(nn.Module):
         self.bn1 = BatchNormalization(4)
         self.bn2 = BatchNormalization(16)
         self.bn3 = BatchNormalization(32)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
 
@@ -244,15 +248,15 @@ class ConvNetBN(nn.Module):
             self.conv1,
             self.bn1,
             nn.ReLU(),
-            self.pool,
+            self.pool1,
             self.conv2,
             self.bn2,
             nn.ReLU(),
-            self.pool,
+            self.pool2,
             self.conv3,
             self.bn3,
             nn.ReLU(),
-            self.pool,
+            self.pool3,
             lambda x: x.view(x.size(0), -1),
             self.fc1,
             nn.ReLU(),
@@ -317,11 +321,9 @@ class ConvNetDropout(nn.Module):
         self.bn2 = BatchNormalization(16)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
         self.bn3 = BatchNormalization(32)
-
-        # Max pooling layer
-        self.pool = nn.MaxPool2d(2, 2)
-
-        # Fully connected layers
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
 
@@ -331,17 +333,17 @@ class ConvNetDropout(nn.Module):
             self.bn1,
             nn.ReLU(),
             CustomDropout(0.5),  # Dropout after first ReLU
-            self.pool,
+            self.pool1,
             self.conv2,
             self.bn2,
             nn.ReLU(),
             CustomDropout(0.5),  # Dropout after second ReLU
-            self.pool,
+            self.pool2,
             self.conv3,
             self.bn3,
             nn.ReLU(),
             CustomDropout(0.5),  # Dropout after third ReLU
-            self.pool,
+            self.pool3,
             nn.Flatten(),  # Flatten feature maps into a vector
             self.fc1,
             nn.ReLU(),

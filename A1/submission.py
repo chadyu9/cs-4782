@@ -310,13 +310,49 @@ class CustomDropout(nn.Module):
 class ConvNetDropout(nn.Module):
     def __init__(self, num_classes=4):
         super(ConvNetDropout, self).__init__()
-        # TODO: define network
-        # END TODO
+        # Convolutional layers with Batch Normalization
+        self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
+        self.bn1 = nn.BatchNorm2d(4)
+        self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
+        self.bn2 = nn.BatchNorm2d(16)
+        self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
+        self.bn3 = nn.BatchNorm2d(32)
+
+        # Max pooling layer
+        self.pool = nn.MaxPool2d(2, 2)
+
+        # Fully connected layers
+        self.fc1 = nn.Linear(32, 1024)
+        self.fc2 = nn.Linear(1024, num_classes)
+
+        # Define the network as a sequence of layers
+        self.layers = [
+            self.conv1,
+            self.bn1,
+            nn.ReLU(),
+            nn.Dropout(0.5),  # Dropout after first ReLU
+            self.pool,
+            self.conv2,
+            self.bn2,
+            nn.ReLU(),
+            nn.Dropout(0.5),  # Dropout after second ReLU
+            self.pool,
+            self.conv3,
+            self.bn3,
+            nn.ReLU(),
+            nn.Dropout(0.5),  # Dropout after third ReLU
+            self.pool,
+            nn.Flatten(),  # Flatten feature maps into a vector
+            self.fc1,
+            nn.ReLU(),
+            nn.Dropout(0.5),  # Dropout after FC1 ReLU
+            self.fc2,
+        ]
 
     def forward(self, x):
-        # TODO: create a convnet forward pass
-        # END TODO
-        pass
+        # Forward pass: apply each layer in sequence.
+        for layer in self.layers:
+            x = layer(x)
         return x
 
 

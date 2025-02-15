@@ -430,6 +430,13 @@ class ResNet(nn.Module):
         # initialize two layers called layer1 and layer2 with num_blocks residual blocks each.
 
         # TODO: (important!) implement the block layer function below before this part
+        self.layer1 = self.block_layer(
+            num_blocks, in_channel=layer1_channel, out_channel=layer2_channel
+        )
+        self.layer2 = self.block_layer(
+            num_blocks, in_channel=layer2_channel, out_channel=out_channel
+        )
+
         # END TODO
 
     def block_layer(self, num_blocks, in_channel, out_channel):
@@ -443,10 +450,23 @@ class ResNet(nn.Module):
         # again, note interm_channel == out_channel for all residual blocks here
 
         # TODO: implement the block layer which has num_blocks blocks stacked together
+        layers = []
+        stride = 2 if in_channel != out_channel else 1
+        layers.append(
+            ResidualBlock(in_channel, out_channel, out_channel, stride=stride)
+        )
+        for _ in range(1, num_blocks):
+            layers.append(
+                ResidualBlock(out_channel, out_channel, out_channel, stride=1)
+            )
+        return nn.Sequential(*layers)
         # END TODO
-        pass
 
     def forward(self, x):
         # TODO: implement the forward function based on the architecture described above
+        x = self.first(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.last(x)
+        return x
         # END TODO
-        pass

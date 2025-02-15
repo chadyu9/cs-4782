@@ -194,13 +194,31 @@ class BatchNormalization(nn.Module):
         # Hint: You need to understand broadcasting in Pytorch! https://pytorch.org/docs/stable/notes/broadcasting.html
         # The mean and variance vector should be of shape (1, C, 1, 1)
         if self.training:
-            # TODO: Implement the logic for training
-            pass
-            # END TODO
+            # Compute the mean and variance across the batch, height, and width for each channel.
+            batch_mean = x.mean(dim=(0, 2, 3), keepdim=True)
+            batch_var = x.var(dim=(0, 2, 3), keepdim=True, unbiased=False)
+
+            # Update running statistics. Note: squeeze the extra dimensions to match running_mean/var shape.
+            self.running_mean = (
+                1 - self.momentum
+            ) * self.running_mean + self.momentum * batch_mean.view(-1)
+            self.running_var = (
+                1 - self.momentum
+            ) * self.running_var + self.momentum * batch_var.view(-1)
+
+            # Normalize the batch using the batch statistics.
+            x_norm = (x - batch_mean) / torch.sqrt(batch_var + self.eps)
         else:
-            # TODO: Implement the logic for inference
-            pass
-            # END TODO
+            # For inference, reshape running_mean and running_var to (1, C, 1, 1) for broadcasting.
+            running_mean = self.running_mean.view(1, self.num_features, 1, 1)
+            running_var = self.running_var.view(1, self.num_features, 1, 1)
+            # Normalize using the running statistics.
+            x_norm = (x - running_mean) / torch.sqrt(running_var + self.eps)
+
+        # Scale and shift the normalized tensor.
+        x = self.weights.view(1, self.num_features, 1, 1) * x_norm + self.bias.view(
+            1, self.num_features, 1, 1
+        )
         return x
 
 
@@ -212,10 +230,40 @@ class ConvNetBN(nn.Module):
     def __init__(self, num_classes=4):
         super(ConvNetBN, self).__init__()
         # TODO: define network
+        self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
+        self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
+        self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
+        self.bn1 = nn.BatchNorm2d(4)
+        self.bn2 = nn.BatchNorm2d(16)
+        self.bn3 = nn.BatchNorm2d(32)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(32, 1024)
+        self.fc2 = nn.Linear(1024, num_classes)
+
+        self.layers = [
+            self.conv1,
+            self.bn1,
+            nn.ReLU(),
+            self.pool,
+            self.conv2,
+            self.bn2,
+            nn.ReLU(),
+            self.pool,
+            self.conv3,
+            self.bn3,
+            nn.ReLU(),
+            self.pool,
+            lambda x: x.view(x.size(0), -1),
+            self.fc1,
+            nn.ReLU(),
+            self.fc2,
+        ]
         # END TODO
 
     def forward(self, x):
         # TODO: create a convnet forward pass
+        for layer in self.layers:
+            x = layer(x)
         # END TODO
         return x
 

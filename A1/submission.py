@@ -233,9 +233,9 @@ class ConvNetBN(nn.Module):
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
-        self.bn1 = nn.BatchNorm2d(4)
-        self.bn2 = nn.BatchNorm2d(16)
-        self.bn3 = nn.BatchNorm2d(32)
+        self.bn1 = BatchNormalization(4)
+        self.bn2 = BatchNormalization(16)
+        self.bn3 = BatchNormalization(32)
         self.pool = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
@@ -312,11 +312,11 @@ class ConvNetDropout(nn.Module):
         super(ConvNetDropout, self).__init__()
         # Convolutional layers with Batch Normalization
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
-        self.bn1 = nn.BatchNorm2d(4)
+        self.bn1 = BatchNormalization(4)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
-        self.bn2 = nn.BatchNorm2d(16)
+        self.bn2 = BatchNormalization(16)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
-        self.bn3 = nn.BatchNorm2d(32)
+        self.bn3 = BatchNormalization(32)
 
         # Max pooling layer
         self.pool = nn.MaxPool2d(2, 2)
@@ -330,22 +330,22 @@ class ConvNetDropout(nn.Module):
             self.conv1,
             self.bn1,
             nn.ReLU(),
-            nn.Dropout(0.5),  # Dropout after first ReLU
+            CustomDropout(0.5),  # Dropout after first ReLU
             self.pool,
             self.conv2,
             self.bn2,
             nn.ReLU(),
-            nn.Dropout(0.5),  # Dropout after second ReLU
+            CustomDropout(0.5),  # Dropout after second ReLU
             self.pool,
             self.conv3,
             self.bn3,
             nn.ReLU(),
-            nn.Dropout(0.5),  # Dropout after third ReLU
+            CustomDropout(0.5),  # Dropout after third ReLU
             self.pool,
             nn.Flatten(),  # Flatten feature maps into a vector
             self.fc1,
             nn.ReLU(),
-            nn.Dropout(0.5),  # Dropout after FC1 ReLU
+            CustomDropout(0.5),  # Dropout after FC1 ReLU
             self.fc2,
         ]
 
@@ -371,13 +371,37 @@ class ResidualBlock(nn.Module):
         # 2 batch normalization layers: named bn1, bn2
 
         # TODO: initialize a residual block with the layers specified above
+        self.conv1 = nn.Conv2d(
+            in_channel,
+            interm_channel,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=False,
+        )
+        self.bn1 = nn.BatchNorm2d(interm_channel)
+        self.conv2 = nn.Conv2d(
+            interm_channel, out_channel, kernel_size=3, stride=1, padding=1, bias=False
+        )
+        self.bn2 = nn.BatchNorm2d(out_channel)
+        self.conv3 = nn.Conv2d(
+            in_channel, out_channel, kernel_size=1, stride=stride, bias=False
+        )
         # END TODO
         pass
 
     def forward(self, x):
         # TODO: implement the forward function based on the architecture above
+        identity = self.conv3(x)
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = F.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += identity
+        out = F.relu(out)
+        return out
         # END TODO
-        pass
 
 
 class ResNet(nn.Module):

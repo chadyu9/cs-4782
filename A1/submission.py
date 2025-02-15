@@ -296,6 +296,8 @@ class CustomDropout(nn.Module):
         """
         if self.training:
             # TODO: Implement the training behavior of dropout.
+            mask = (torch.rand_like(x) > self.p).float()
+            x = x * mask / (1.0 - self.p)
             # END TODO
             pass
         else:

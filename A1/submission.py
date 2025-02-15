@@ -44,28 +44,22 @@ def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, dev
     """
     train_loss_arr = []
     val_loss_arr = []
-    running_loss = 0.0
 
-    for epoch in range(epochs):
+    for _ in range(epochs):
         # TODO: write a training loop
-
-        batch_training_loss = 0.0
-
-        for _, (inputs, targets) in enumerate(data_loader):
+        model.train()
+        train_running_loss = 0.0
+        for _, (inputs, labels) in enumerate(data_loader, 0):
             optimizer.zero_grad()
+
+            inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            batch_training_loss += loss.item() / inputs.size(0)
+            loss = criterion(outputs, labels)
+            train_running_loss += loss.item()
             loss.backward()
             optimizer.step()
-        train_loss_arr.append(batch_training_loss)
-
-        batch_val_loss = 0.0
-        for _, (inputs, targets) in enumerate(val_data_loader):
-            outputs = model(inputs)
-            val_loss = criterion(outputs, targets)
-            batch_val_loss += val_loss.item() / inputs.size(0)
-        val_loss_arr.append(batch_val_loss)
+        train_loss_arr.append(train_running_loss / len(data_loader))
+        val_loss_arr.append(val(model, val_data_loader, criterion, device))
         # END TODO
 
     print("Training finished.")
@@ -93,7 +87,7 @@ class ConvNet(nn.Module):
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
         self.fc1 = nn.Linear(8 * 8 * 32, 1024)
-        self.fc2 = nn.Linear(1024, 4)
+        self.fc2 = nn.Linear(1024, num_classes)
         self.layers = [
             self.conv1,
             nn.ReLU(),
@@ -125,10 +119,33 @@ class ConvNetMaxPooling(nn.Module):
     def __init__(self, num_classes=4):
         super(ConvNetMaxPooling, self).__init__()
         # TODO: define network
+        self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
+        self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
+        self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(32, 1024)
+        self.fc2 = nn.Linear(1024, num_classes)
+        self.layers = [
+            self.conv1,
+            nn.ReLU(),
+            self.pool,
+            self.conv2,
+            nn.ReLU(),
+            self.pool,
+            self.conv3,
+            nn.ReLU(),
+            self.pool,
+            lambda x: x.view(x.size(0), -1),
+            self.fc1,
+            nn.ReLU(),
+            self.fc2,
+        ]
         # END TODO
 
     def forward(self, x):
         # TODO: create a convnet forward pass
+        for layer in self.layers:
+            x = layer(x)
         # END TODO
         return x
 

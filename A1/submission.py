@@ -328,28 +328,32 @@ class ConvNetDropout(nn.Module):
         self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
+        self.drop1 = CustomDropout(0.5)
+        self.drop2 = CustomDropout(0.5)
+        self.drop3 = CustomDropout(0.5)
+        self.drop4 = CustomDropout(0.5)
 
         # Define the network as a sequence of layers
         self.layers = [
             self.conv1,
             self.bn1,
             nn.ReLU(),
-            CustomDropout(0.5),  # Dropout after first ReLU
+            self.drop1,  # Dropout after first ReLU
             self.pool1,
             self.conv2,
             self.bn2,
             nn.ReLU(),
-            CustomDropout(0.5),  # Dropout after second ReLU
+            self.drop2,  # Dropout after second ReLU
             self.pool2,
             self.conv3,
             self.bn3,
             nn.ReLU(),
-            CustomDropout(0.5),  # Dropout after third ReLU
+            self.drop3,  # Dropout after third ReLU
             self.pool3,
             nn.Flatten(),  # Flatten feature maps into a vector
             self.fc1,
             nn.ReLU(),
-            CustomDropout(0.5),  # Dropout after FC1 ReLU
+            self.drop4,  # Dropout after FC1 ReLU
             self.fc2,
         ]
 
@@ -381,15 +385,20 @@ class ResidualBlock(nn.Module):
             kernel_size=3,
             stride=stride,
             padding=1,
-            bias=False,
+            bias=True,
         )
         self.bn1 = nn.BatchNorm2d(interm_channel)
         self.conv2 = nn.Conv2d(
-            interm_channel, out_channel, kernel_size=3, stride=1, padding=1, bias=False
+            interm_channel,
+            out_channel,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=True,
         )
         self.bn2 = nn.BatchNorm2d(out_channel)
         self.conv3 = nn.Conv2d(
-            in_channel, out_channel, kernel_size=1, stride=stride, bias=False
+            in_channel, out_channel, kernel_size=1, stride=stride, bias=True
         )
         # END TODO
         pass

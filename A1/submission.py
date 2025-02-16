@@ -46,21 +46,30 @@ def train(model, data_loader, val_data_loader, criterion, optimizer, epochs, dev
     val_loss_arr = []
 
     for _ in range(epochs):
-        # TODO: write a training loop
+        # Set to train mode
         model.train()
+
+        # Loop through batches in the data loader
         train_running_loss = 0.0
         for _, (inputs, labels) in enumerate(data_loader, 0):
+            # Set the gradients to zero
             optimizer.zero_grad()
 
+            # Move inputs and labels to device
             inputs, labels = inputs.to(device), labels.to(device)
+
+            # Forward pass and loss computation
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             train_running_loss += loss.item()
+
+            # Backward pass and optimizer step
             loss.backward()
             optimizer.step()
         train_loss_arr.append(train_running_loss / len(data_loader))
+
+        # Add validation loss to val_loss_arr with the val function
         val_loss_arr.append(val(model, val_data_loader, criterion, device))
-        # END TODO
 
     print("Training finished.")
     return train_loss_arr, val_loss_arr
@@ -82,12 +91,14 @@ class ConvNet(nn.Module):
 
     def __init__(self, num_classes=4):
         super(ConvNet, self).__init__()
-        # TODO: define the network
+
+        # Set up 3 convolutional layers and 2 fully connected layers
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
         self.fc1 = nn.Linear(8 * 8 * 32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
+
         self.layers = [
             self.conv1,
             nn.ReLU(),
@@ -100,14 +111,11 @@ class ConvNet(nn.Module):
             nn.ReLU(),
             self.fc2,
         ]
-        # END TODO
 
     def forward(self, x):
-        # TODO: create a convnet forward pass
+        # Forward pass by applying each layer in sequence
         for layer in self.layers:
             x = layer(x)
-        # END TODO
-
         return x
 
 
@@ -118,7 +126,8 @@ class ConvNetMaxPooling(nn.Module):
 
     def __init__(self, num_classes=4):
         super(ConvNetMaxPooling, self).__init__()
-        # TODO: define network
+
+        # Set up 3 convolutional layers, 2 max pooling layers, and 2 fully connected layers
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
@@ -127,6 +136,7 @@ class ConvNetMaxPooling(nn.Module):
         self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(32, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
+
         self.layers = [
             self.conv1,
             nn.ReLU(),
@@ -142,13 +152,11 @@ class ConvNetMaxPooling(nn.Module):
             nn.ReLU(),
             self.fc2,
         ]
-        # END TODO
 
     def forward(self, x):
-        # TODO: create a convnet forward pass
+        # Forward pass by applying each layer in sequence
         for layer in self.layers:
             x = layer(x)
-        # END TODO
         return x
 
 
@@ -196,13 +204,12 @@ class BatchNormalization(nn.Module):
         # Hint: You need to understand broadcasting in Pytorch! https://pytorch.org/docs/stable/notes/broadcasting.html
         # The mean and variance vector should be of shape (1, C, 1, 1)
 
-        _, C, _, _ = x.shape
         if self.training:
-            # Compute the mean and variance across the batch, height, and width for each channel.
+            # Compute the mean and variance across the batch, height, and width for each channel
             batch_mean = x.mean(dim=(0, 2, 3), keepdim=True)
             batch_var = x.var(dim=(0, 2, 3), keepdim=True, unbiased=False)
 
-            # Update running statistics. Note: squeeze the extra dimensions to match running_mean/var shape.
+            # Update running statistics and squeeze the extra dimensions to match running_mean/var shape
             self.running_mean = (
                 1 - self.momentum
             ) * self.running_mean + self.momentum * batch_mean.view(-1)
@@ -210,16 +217,17 @@ class BatchNormalization(nn.Module):
                 1 - self.momentum
             ) * self.running_var + self.momentum * batch_var.view(-1)
 
-            # Normalize the batch using the batch statistics.
+            # Normalize the input using the batch statistics
             x_norm = (x - batch_mean) / torch.sqrt(batch_var + self.eps)
         else:
-            # For inference, reshape running_mean and running_var to (1, C, 1, 1) for broadcasting.
+            # For inference, reshape running_mean and running_var to (1, C, 1, 1) for broadcasting
             running_mean = self.running_mean.view(1, self.num_features, 1, 1)
             running_var = self.running_var.view(1, self.num_features, 1, 1)
-            # Normalize using the running statistics.
+
+            # Normalize the input using the running statistics
             x_norm = (x - running_mean) / torch.sqrt(running_var + self.eps)
 
-        # Scale and shift the normalized tensor.
+        # Scale and shift the normalized tensor using weights and bias
         x = self.weights.view(1, self.num_features, 1, 1) * x_norm + self.bias.view(
             1, self.num_features, 1, 1
         )
@@ -233,7 +241,8 @@ class ConvNetBN(nn.Module):
 
     def __init__(self, num_classes=4):
         super(ConvNetBN, self).__init__()
-        # TODO: define network
+
+        # Set up 3 convolutional layers, 2 max pooling layers, 3 batch normalization layers, and 2 fully connected layers
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
         self.conv3 = nn.Conv2d(16, 32, 3, 2, 1)
@@ -264,13 +273,11 @@ class ConvNetBN(nn.Module):
             nn.ReLU(),
             self.fc2,
         ]
-        # END TODO
 
     def forward(self, x):
-        # TODO: create a convnet forward pass
+        # Forward pass by applying each layer in sequence
         for layer in self.layers:
             x = layer(x)
-        # END TODO
         return x
 
 
@@ -301,14 +308,11 @@ class CustomDropout(nn.Module):
         - x (Tensor): The modified input tensor after applying dropout.
         """
         if self.training:
-            # TODO: Implement the training behavior of dropout.
+            # Do a dropout operation on the input tensor x
             mask = (torch.rand_like(x) > self.p).float()
             x = x * mask / (1.0 - self.p)
-            # END TODO
             pass
         else:
-            # TODO: Implement the inference behavior of dropout.
-            # END TODO
             pass
         return x
 
@@ -316,7 +320,8 @@ class CustomDropout(nn.Module):
 class ConvNetDropout(nn.Module):
     def __init__(self, num_classes=4):
         super(ConvNetDropout, self).__init__()
-        # Convolutional layers with Batch Normalization
+
+        # Set up 3 convolutional layers, 2 max pooling layers, 3 batch normalization layers, 2 fully connected layers, and 4 dropout layers
         self.conv1 = nn.Conv2d(3, 4, 3, 2, 1)
         self.bn1 = BatchNormalization(4)
         self.conv2 = nn.Conv2d(4, 16, 3, 2, 1)
@@ -333,32 +338,31 @@ class ConvNetDropout(nn.Module):
         self.drop3 = CustomDropout(0.5)
         self.drop4 = CustomDropout(0.5)
 
-        # Define the network as a sequence of layers
         self.layers = [
             self.conv1,
             self.bn1,
             nn.ReLU(),
-            self.drop1,  # Dropout after first ReLU
+            self.drop1,
             self.pool1,
             self.conv2,
             self.bn2,
             nn.ReLU(),
-            self.drop2,  # Dropout after second ReLU
+            self.drop2,
             self.pool2,
             self.conv3,
             self.bn3,
             nn.ReLU(),
-            self.drop3,  # Dropout after third ReLU
+            self.drop3,
             self.pool3,
-            nn.Flatten(),  # Flatten feature maps into a vector
+            nn.Flatten(),
             self.fc1,
             nn.ReLU(),
-            self.drop4,  # Dropout after FC1 ReLU
+            self.drop4,
             self.fc2,
         ]
 
     def forward(self, x):
-        # Forward pass: apply each layer in sequence.
+        # Forward pass by applying each layer in sequence
         for layer in self.layers:
             x = layer(x)
         return x
@@ -375,10 +379,8 @@ class ResidualBlock(nn.Module):
         stride = stride for convolution, defaults to 1
         """
         super().__init__()
-        # 3 convolutional layers: named conv1, conv2, and conv3
-        # 2 batch normalization layers: named bn1, bn2
 
-        # TODO: initialize a residual block with the layers specified above
+        # Set up the two convolutional layers, the shortcut connection, and the batch normalization layers
         self.conv1 = nn.Conv2d(
             in_channel,
             interm_channel,
@@ -392,7 +394,7 @@ class ResidualBlock(nn.Module):
             interm_channel,
             out_channel,
             kernel_size=3,
-            stride=stride,
+            stride=1,
             padding=1,
             bias=True,
         )
@@ -400,11 +402,10 @@ class ResidualBlock(nn.Module):
         self.conv3 = nn.Conv2d(
             in_channel, out_channel, kernel_size=1, stride=stride, bias=True
         )
-        # END TODO
         pass
 
     def forward(self, x):
-        # TODO: implement the forward function based on the architecture above
+        # Forward pass by applying each layer in sequence
         identity = self.conv3(x)
         out = self.conv1(x)
         out = self.bn1(out)
@@ -414,7 +415,6 @@ class ResidualBlock(nn.Module):
         out += identity
         out = F.relu(out)
         return out
-        # END TODO
 
 
 class ResNet(nn.Module):
@@ -431,6 +431,8 @@ class ResNet(nn.Module):
         num_classes = number of classes in the classification output, defaults to 4
         """
         super(ResNet, self).__init__()
+
+        # Set up the first convolutional layer, the two block layers, and the last fully connected layer
         self.first = nn.Sequential(
             nn.LazyConv2d(layer1_channel, kernel_size=7, stride=2, padding=3),
             nn.LazyBatchNorm2d(),
@@ -440,17 +442,12 @@ class ResNet(nn.Module):
         self.last = nn.Sequential(
             nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(), nn.LazyLinear(num_classes)
         )
-        # initialize two layers called layer1 and layer2 with num_blocks residual blocks each.
-
-        # TODO: (important!) implement the block layer function below before this part
         self.layer1 = self.block_layer(
             num_blocks, in_channel=layer1_channel, out_channel=layer2_channel
         )
         self.layer2 = self.block_layer(
             num_blocks, in_channel=layer2_channel, out_channel=out_channel
         )
-
-        # END TODO
 
     def block_layer(self, num_blocks, in_channel, out_channel):
         """
@@ -462,7 +459,7 @@ class ResNet(nn.Module):
         # make use of the ResidualBlock class you've already implemented
         # again, note interm_channel == out_channel for all residual blocks here
 
-        # TODO: implement the block layer which has num_blocks blocks stacked together
+        # Construct the block layer with num_blocks ResidualBlocks as specified
         layers = []
         stride = 2 if in_channel != out_channel else 1
         layers.append(
@@ -473,13 +470,11 @@ class ResNet(nn.Module):
                 ResidualBlock(out_channel, out_channel, out_channel, stride=1)
             )
         return nn.Sequential(*layers)
-        # END TODO
 
     def forward(self, x):
-        # TODO: implement the forward function based on the architecture described above
+        # Forward pass by applying each layer in sequence
         x = self.first(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.last(x)
         return x
-        # END TODO

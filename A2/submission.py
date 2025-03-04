@@ -20,6 +20,9 @@ def get_word_embeddings(model, sequence):
     word_embeddings = []
 
     ## TODO 1: implement function for Word2Vec model
+    for word in str(sequence).split(" "):
+        if word in model.wv:
+            word_embeddings.append(model.wv[word])
     ## TODO 4: add support for KeyedVectors model
     #################
 
@@ -42,7 +45,8 @@ def get_reviews_embeddings(model, data):
     reviews_embeddings = []
     ## TODO 2: implement function
     #################
-
+    for review in data["text"]:
+        reviews_embeddings.append(get_word_embeddings(model, review))
     return reviews_embeddings
 
 
@@ -58,7 +62,14 @@ def max_pool(embeddings, d=300):
     max_pool_embeddings = []
     ## TODO 3: max pooling
     #################
+    for i in range(d):
+        to_pool = [embedding[i] for embedding in embeddings]
+        if to_pool:
+            max_pool_embeddings.append(max(to_pool))
+        else:
+            max_pool_embeddings.append(0)
     return max_pool_embeddings
+
 
 class LSTM(nn.Module):
     def __init__(self, num_layers, input_size, hidden_size, seq_length, num_classes=2):
@@ -118,6 +129,7 @@ def reviews_processing(google_embeddings, length):
 
     return embeddings
 
+
 def val(model, val_loader, criterion, device):
     """
     Inputs:
@@ -134,12 +146,12 @@ def val(model, val_loader, criterion, device):
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(val_loader, 0):
-
             # TODO 7: write validation loop body
             #################
             pass
 
     return val_running_loss, (num_correct / total).item()
+
 
 def train(model, train_loader, val_loader, criterion, epochs, optimizer, device):
     """
@@ -162,7 +174,6 @@ def train(model, train_loader, val_loader, criterion, epochs, optimizer, device)
     for epoch in range(epochs):
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
-
             # TODO 7: write train loop body
             #################
             pass
@@ -197,9 +208,11 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
 
         pe = torch.zeros(max_seq_length, d_model)
-        position = torch.arange(0, max_seq_length, dtype=torch.float).reshape(max_seq_length, 1)
-        div_term = torch.exp( 
-              -1 * (torch.arange(0, d_model, 2).float()/d_model) * math.log(10000.0)
+        position = torch.arange(0, max_seq_length, dtype=torch.float).reshape(
+            max_seq_length, 1
+        )
+        div_term = torch.exp(
+            -1 * (torch.arange(0, d_model, 2).float() / d_model) * math.log(10000.0)
         )
 
         pe[:, 0::2] = torch.sin(position * div_term)
@@ -239,7 +252,9 @@ class MultiHeadAttention(nn.Module):
         Reshapes Q, K, V into multiple heads.
         """
         batch_size, seq_length, d_model = x.size()
-        return x.view(batch_size, seq_length, self.num_heads, self.d_k).permute(0, 2, 1, 3)
+        return x.view(batch_size, seq_length, self.num_heads, self.d_k).permute(
+            0, 2, 1, 3
+        )
 
     def compute_attention(self, Q, K, V):
         """
@@ -255,13 +270,16 @@ class MultiHeadAttention(nn.Module):
         Concatenates the outputs of each attention head into a single output.
         """
         batch_size, _, seq_length, d_k = x.size()
-        return x.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_length, self.d_model)
+        return (
+            x.permute(0, 2, 1, 3)
+            .contiguous()
+            .view(batch_size, seq_length, self.d_model)
+        )
 
     def forward(self, x):
         # TODO: 9.3 implement forward pass
         #################
         return x
-
 
 
 class FeedForward(nn.Module):
@@ -298,7 +316,6 @@ class EncoderLayer(nn.Module):
         #################
 
     def forward(self, x):
-
         ## TODO 11: implement the forward function based on the architecture described above
         #################
 
@@ -325,7 +342,6 @@ class Transformer(nn.Module):
         #################
 
     def forward(self, x):
-
         ## TODO 12: implement the forward pass
         #################
 

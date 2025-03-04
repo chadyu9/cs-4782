@@ -20,10 +20,15 @@ def get_word_embeddings(model, sequence):
     word_embeddings = []
 
     ## TODO 1: implement function for Word2Vec model
-    for word in str(sequence).split(" "):
-        if word in model.wv:
-            word_embeddings.append(model.wv[word])
+    if isinstance(model, gensim.models.word2vec.Word2Vec):
+        for word in str(sequence).split(" "):
+            if word in model.wv:
+                word_embeddings.append(model.wv[word])
     ## TODO 4: add support for KeyedVectors model
+    elif isinstance(model, gensim.models.keyedvectors.KeyedVectors):
+        for word in str(sequence).split(" "):
+            if word in model:
+                word_embeddings.append(model[word])
     #################
 
     return word_embeddings

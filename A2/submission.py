@@ -410,6 +410,7 @@ class Transformer(nn.Module):
             [EncoderLayer(d_model, num_heads, d_ff, p) for _ in range(num_layers)]
         )
         self.fc1 = nn.Linear(d_model, 128)
+        self.relu = nn.ReLU()
         self.fc2 = nn.Linear(128, num_classes)
         self.dropout = nn.Dropout(p)
 
@@ -420,7 +421,7 @@ class Transformer(nn.Module):
         for layer in self.encoder_layers:
             x = layer(x)
         x = x.mean(dim=1)
-        x = self.fc2(F.relu(self.fc1(F.relu(x))))
+        x = self.fc2(self.relu(self.fc1(self.relu(x))))
         return x
 
 

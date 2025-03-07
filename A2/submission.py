@@ -173,13 +173,19 @@ def val(model, val_loader, criterion, device):
         for i, (inputs, labels) in enumerate(val_loader, 0):
             # TODO 7: write validation loop body
             #################
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.float().to(device)
+            labels = labels.long().to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             val_running_loss += loss.item()
 
+            _, preds = torch.max(outputs, dim=1)
+            num_correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    val_acc = num_correct / total if total > 0 else 0
     model.train()
-    return val_running_loss, (num_correct / total).item()
+    return val_running_loss, val_acc
 
 
 def train(model, train_loader, val_loader, criterion, epochs, optimizer, device):
@@ -207,8 +213,8 @@ def train(model, train_loader, val_loader, criterion, epochs, optimizer, device)
             # TODO 7: write train loop body
             #################
             optimizer.zero_grad()
-
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.float().to(device)
+            labels = labels.long().to(device)
 
             outputs = model(inputs)
             loss = criterion(outputs, labels)

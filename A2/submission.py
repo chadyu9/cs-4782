@@ -98,6 +98,15 @@ class LSTM(nn.Module):
 
         ## TODO 5: define LSTM components
         #################
+        self.lstm = nn.LSTM(
+            input_size=self.input_size,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            batch_first=True,
+        )
+        self.relu = nn.ReLU()
+        self.fc1 = nn.Linear(self.hidden_size * self.num_layers, 128)
+        self.fc2 = nn.Linear(128, self.num_classes)
 
     def forward(self, x):
         """
@@ -109,7 +118,10 @@ class LSTM(nn.Module):
         """
         ## TODO 5: implement the forward function based on the architecture described above
         #################
-
+        _, (x, _) = self.lstm(x)
+        x = x.permute(1, 0, 2).reshape(-1, self.hidden_size * self.num_layers)
+        x = self.fc1(self.relu(x))
+        x = self.fc2(self.relu(x))
         return x
 
 
@@ -131,6 +143,13 @@ def reviews_processing(google_embeddings, length):
     embeddings = []
     ## TODO 6: Implement reviews_processing to modify the embeddings
     ###########
+    d = len(google_embeddings[0][0])
+    for review in google_embeddings:
+        if len(review) >= length:
+            embeddings.append(review[:length])
+        else:
+            embeddings.append(review + [np.zeros(d)] * (length - len(review)))
+    embeddings = np.array(embeddings)
 
     return embeddings
 
@@ -149,12 +168,17 @@ def val(model, val_loader, criterion, device):
     num_correct = 0
     total = 0
 
+    model.eval()
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(val_loader, 0):
             # TODO 7: write validation loop body
             #################
-            pass
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            val_running_loss += loss.item()
 
+    model.train()
     return val_running_loss, (num_correct / total).item()
 
 
@@ -177,11 +201,21 @@ def train(model, train_loader, val_loader, criterion, epochs, optimizer, device)
     running_loss = 0.0
 
     for epoch in range(epochs):
+        model.train()
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
             # TODO 7: write train loop body
             #################
-            pass
+            optimizer.zero_grad()
+
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+
+            loss.backward()
+            optimizer.step()
 
         val_loss, val_acc = val(model, val_loader, criterion, device)
         train_loss_arr.append(running_loss)
@@ -251,6 +285,10 @@ class MultiHeadAttention(nn.Module):
         # Hint: Recall that linear layers essentially perform matrix multiplication
         #       between the layer input and layer weights
         #################
+        self.W_q = nn.Linear(self.d_k, self.d_k)
+        self.W_k = nn.Linear(self.d_k, self.d_k)
+        self.W_v = nn.Linear(self.d_k, self.d_k)
+        self.W_o = nn.Linear(self.d_k, self.d_model)
 
     def split_heads(self, x):
         """
@@ -267,7 +305,9 @@ class MultiHeadAttention(nn.Module):
         """
         # TODO 9.2: compute attention using the attention equation provided above
         #################
-        attention = None
+        attention = (
+            F.softmax(Q @ torch.transpose(K, -2, -1) / math.sqrt(self.d_k), dim=-1) @ V
+        )
         return attention
 
     def combine_heads(self, x):
@@ -284,6 +324,14 @@ class MultiHeadAttention(nn.Module):
     def forward(self, x):
         # TODO: 9.3 implement forward pass
         #################
+        Q, K, V = (
+            self.split_heads(self.W_q(x)),
+            self.split_heads(self.W_k(x)),
+            self.split_heads(self.W_v(x)),
+        )
+        attention = self.compute_attention(Q, K, V)
+        attention = self.combine_heads(attention)
+        x = self.W_o(attention)
         return x
 
 
@@ -298,11 +346,16 @@ class FeedForward(nn.Module):
 
         # TODO 10: define the network
         #################
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+
+        self.layers = [self.fc1, nn.ReLU(), self.fc2]
 
     def forward(self, x):
         # TODO 10: implement feed forward pass
         #################
-
+        for layer in self.layers:
+            x = layer(x)
         return x
 
 
@@ -319,11 +372,17 @@ class EncoderLayer(nn.Module):
 
         # TODO 11: define the encoder layer
         #################
+        self.self_attn = MultiHeadAttention(d_model, num_heads)
+        self.feed_forward = FeedForward(d_model, d_ff)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(p)
 
     def forward(self, x):
         ## TODO 11: implement the forward function based on the architecture described above
         #################
-
+        ffn_input = self.norm1(x + self.dropout(self.self_attn(x)))
+        x = self.norm2(ffn_input + self.dropout(self.feed_forward(ffn_input)))
         return x
 
 
@@ -345,11 +404,22 @@ class Transformer(nn.Module):
 
         # TODO 12: define the transformer
         #################
+        self.positional_encoding = PositionalEncoding(d_model, max_seq_length)
+        self.encoder_layers = nn.ModuleList(
+            [EncoderLayer(d_model, num_heads, d_ff, p) for _ in range(num_layers)]
+        )
+        self.fc1 = nn.Linear(d_model, 128)
+        self.fc2 = nn.Linear(128, num_classes)
+        self.dropout = nn.Dropout(p)
 
     def forward(self, x):
         ## TODO 12: implement the forward pass
         #################
-
+        x = self.dropout(x + self.positional_encoding(x))
+        for layer in self.encoder_layers:
+            x = layer(x)
+        x = x.mean(dim=1)
+        x = self.fc2(F.relu(self.fc1(F.relu(x))))
         return x
 
 

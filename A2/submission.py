@@ -285,10 +285,10 @@ class MultiHeadAttention(nn.Module):
         # Hint: Recall that linear layers essentially perform matrix multiplication
         #       between the layer input and layer weights
         #################
-        self.W_q = nn.Linear(self.d_k, self.d_k)
-        self.W_k = nn.Linear(self.d_k, self.d_k)
-        self.W_v = nn.Linear(self.d_k, self.d_k)
-        self.W_o = nn.Linear(self.d_k, self.d_model)
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
 
     def split_heads(self, x):
         """
@@ -347,9 +347,10 @@ class FeedForward(nn.Module):
         # TODO 10: define the network
         #################
         self.fc1 = nn.Linear(d_model, d_ff)
+        self.relu = nn.ReLU()
         self.fc2 = nn.Linear(d_ff, d_model)
 
-        self.layers = [self.fc1, nn.ReLU(), self.fc2]
+        self.layers = [self.fc1, self.relu, self.fc2]
 
     def forward(self, x):
         # TODO 10: implement feed forward pass

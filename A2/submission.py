@@ -449,11 +449,28 @@ def process_batch(bert_model, data, criterion, device, val=False):
 
     outputs, metrics = dict(), dict()
 
-    # TODO 13: process batch
-    # Hint: For details on what information the data from the data loader contains
-    #       check the __getitem__ function defined in the CustomClassDataset implemented
-    #       at the beginning of Part 5
-    # Hint: Make sure to send the data to the same device that the model is on.
-    #################
+    # Move inputs to the same device as the model.
+    input_ids = data["source_ids"].to(device)
+    attention_mask = data["source_mask"].to(device)
+    labels = data["label"].to(device)
+
+    # Forward pass through the model.
+    model_output = bert_model(input_ids=input_ids, attention_mask=attention_mask)
+    logits = model_output.logits
+
+    # Compute loss (keep as a tensor so backward() can be called later).
+    loss = criterion(logits, labels)
+    metrics["loss"] = loss
+
+    # Compute predicted labels.
+    preds = torch.argmax(logits, dim=1)
+    outputs["out"] = logits
+    outputs["preds"] = preds
+
+    # For validation/test batches, return additional accuracy metrics.
+    if val:
+        metrics["batch_size"] = labels.size(0)
+        # Return num_correct as a tensor to allow later tensor operations.
+        metrics["num_correct"] = (preds == labels).sum()
 
     return outputs, metrics

@@ -173,13 +173,19 @@ def val(model, val_loader, criterion, device):
         for i, (inputs, labels) in enumerate(val_loader, 0):
             # TODO 7: write validation loop body
             #################
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.float().to(device)
+            labels = labels.long().to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             val_running_loss += loss.item()
 
+            _, preds = torch.max(outputs, dim=1)
+            num_correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    val_acc = num_correct / total if total > 0 else 0
     model.train()
-    return val_running_loss, (num_correct / total).item()
+    return val_running_loss, val_acc
 
 
 def train(model, train_loader, val_loader, criterion, epochs, optimizer, device):
@@ -207,8 +213,8 @@ def train(model, train_loader, val_loader, criterion, epochs, optimizer, device)
             # TODO 7: write train loop body
             #################
             optimizer.zero_grad()
-
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.float().to(device)
+            labels = labels.long().to(device)
 
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -285,10 +291,10 @@ class MultiHeadAttention(nn.Module):
         # Hint: Recall that linear layers essentially perform matrix multiplication
         #       between the layer input and layer weights
         #################
-        self.W_q = nn.Linear(self.d_k, self.d_k)
-        self.W_k = nn.Linear(self.d_k, self.d_k)
-        self.W_v = nn.Linear(self.d_k, self.d_k)
-        self.W_o = nn.Linear(self.d_k, self.d_model)
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
 
     def split_heads(self, x):
         """
@@ -347,9 +353,10 @@ class FeedForward(nn.Module):
         # TODO 10: define the network
         #################
         self.fc1 = nn.Linear(d_model, d_ff)
+        self.relu = nn.ReLU()
         self.fc2 = nn.Linear(d_ff, d_model)
 
-        self.layers = [self.fc1, nn.ReLU(), self.fc2]
+        self.layers = [self.fc1, self.relu, self.fc2]
 
     def forward(self, x):
         # TODO 10: implement feed forward pass
@@ -409,6 +416,7 @@ class Transformer(nn.Module):
             [EncoderLayer(d_model, num_heads, d_ff, p) for _ in range(num_layers)]
         )
         self.fc1 = nn.Linear(d_model, 128)
+        self.relu = nn.ReLU()
         self.fc2 = nn.Linear(128, num_classes)
         self.dropout = nn.Dropout(p)
 
@@ -419,7 +427,7 @@ class Transformer(nn.Module):
         for layer in self.encoder_layers:
             x = layer(x)
         x = x.mean(dim=1)
-        x = self.fc2(F.relu(self.fc1(F.relu(x))))
+        x = self.fc2(self.relu(self.fc1(self.relu(x))))
         return x
 
 
@@ -441,11 +449,28 @@ def process_batch(bert_model, data, criterion, device, val=False):
 
     outputs, metrics = dict(), dict()
 
-    # TODO 13: process batch
-    # Hint: For details on what information the data from the data loader contains
-    #       check the __getitem__ function defined in the CustomClassDataset implemented
-    #       at the beginning of Part 5
-    # Hint: Make sure to send the data to the same device that the model is on.
-    #################
+    # Move inputs to the same device as the model.
+    input_ids = data["source_ids"].to(device)
+    attention_mask = data["source_mask"].to(device)
+    labels = data["label"].to(device)
+
+    # Forward pass through the model.
+    model_output = bert_model(input_ids=input_ids, attention_mask=attention_mask)
+    logits = model_output.logits
+
+    # Compute loss (keep as a tensor so backward() can be called later).
+    loss = criterion(logits, labels)
+    metrics["loss"] = loss
+
+    # Compute predicted labels.
+    preds = torch.argmax(logits, dim=1)
+    outputs["out"] = logits
+    outputs["preds"] = preds
+
+    # For validation/test batches, return additional accuracy metrics.
+    if val:
+        metrics["batch_size"] = labels.size(0)
+        # Return num_correct as a tensor to allow later tensor operations.
+        metrics["num_correct"] = (preds == labels).sum()
 
     return outputs, metrics

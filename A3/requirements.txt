@@ -1,0 +1,13 @@
+torch==2.5.1
+numpy==1.26.4
+pandas==2.2.2
+torchvision==0.20.1
+datasets
+matplotlib
+seaborn
+tqdm
+nltk
+gensim
+scikit-learn
+transformers
+einops

@@ -45,7 +45,21 @@ def triplet_loss(queries, keys, margin=1.0):
     # Hint: How might you use matrices/matrix operations to keep track of distances between
     #       positive and negative pairs? (looking ahead to the instructions in part 1.2 maybe be useful)
     #################
-    loss = None
+    # Normalize the queries and keys, compute the similarity matrix, and extract the positive similarities
+    norm_q, norm_k = F.normalize(queries, p=2, dim=1).to(device), F.normalize(
+        keys, p=2, dim=1
+    ).to(device)
+    sim_matrix = torch.mm(norm_q, norm_k.T).to(device)
+    pos_sim = torch.diag(sim_matrix).to(device)
+
+    # Compute the loss elements in place in the matrix
+    loss_matrix = torch.maximum(
+        torch.zeros(b, b).to(device), sim_matrix - pos_sim.reshape(b, 1) + margin
+    ).to(device)
+    torch.diagonal(loss_matrix, 0).zero_().to(device)
+
+    # Average the loss elements
+    loss = torch.sum(loss_matrix) / (b * (b - 1))
 
     return loss
 
@@ -69,7 +83,31 @@ def nt_xent_loss(queries, keys, temperature=0.1):
     #       location (device) your model and data are on.
     # Hint: Which loss function does the first equation in step 3 remind you of?
     #################
-    loss = None
+    total_training_examples_norm = F.normalize(
+        torch.cat((queries, keys), dim=0), p=2, dim=1
+    ).to(device)
+    sim_matrix = (
+        torch.mm(total_training_examples_norm, total_training_examples_norm.T)
+        / temperature
+    ).to(device)
+
+    # Mask self similarities
+    mask = torch.eye(n, dtype=torch.bool).to(device)
+    sim_matrix.masked_fill_(mask, -1e9)
+
+    # Derive ground truth labels (positive pairs are (k, k+b) and (k+b, k))
+    target = torch.arange(n).to(device)
+    target[0:b] += b
+    target[b:] -= b
+    ground_truth_labels = torch.scatter(
+        torch.zeros(n, n).to(device),
+        dim=1,
+        index=target.reshape(n, 1),
+        src=torch.ones(n, n).to(device),
+    ).to(device)
+
+    # Use cross entropy loss to get SimCLR loss
+    loss = F.cross_entropy(sim_matrix, ground_truth_labels, reduction="mean").to(device)
 
     return loss
 
@@ -91,14 +129,49 @@ class ViT(nn.Module):
 
         # TODO3: define the ViT
         #################
-
+        self.to_patch_embedding = nn.Sequential(
+            Rearrange(
+                "b c (h p1) (w p2) -> b (h w) (p1 p2 c)", p1=patch_size, p2=patch_size
+            ),
+            nn.LayerNorm(patch_size * patch_size * 3),
+            nn.Linear(patch_size * patch_size * 3, d_model),
+            nn.LayerNorm(d_model),
+        )
+        self.pos_embedding = posemb_sincos_2d(
+            h=img_side_length // patch_size,
+            w=img_side_length // patch_size,
+            dim=d_model,
+        )
+        self.dropout = nn.Dropout(p)
+        self.encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=d_model,
+                nhead=num_heads,
+                dim_feedforward=d_ff,
+                dropout=p,
+                activation="gelu",
+            ),
+            num_layers=num_layers,
+        )
+        self.output_ln = nn.LayerNorm(d_model)
+        self.projection_head = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.SiLU(),
+            nn.Linear(d_model, d_model),
+        )
         ################
 
     def forward(self, x, return_embedding=False):
-
         ## TODO4: Write the forward pass for the ViT
         #################
-
+        x = self.to_patch_embedding(x)
+        x += self.pos_embedding
+        x = self.dropout(x)
+        x = self.encoder(x)
+        x = self.output_ln(x)
+        if return_embedding:
+            return x.mean(dim=1)
+        return self.projection_head(x.mean(dim=1))
         #################
 
-        return output
+        # return output

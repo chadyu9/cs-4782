@@ -42,7 +42,15 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
 
         ## TODO: Implement __init__
-        pass
+
+        self.relu = nn.ReLU()
+        self.fc1 = nn.Linear(x_dim,h_dim1)
+        self.fc2 = nn.Linear(h_dim1, h_dim2)
+        self.fc3 = nn.Linear(h_dim2, z_dim)
+        self.fc4 = nn.Linear(h_dim2, z_dim)
+        self.fc5 = nn.Linear(z_dim, h_dim2)
+        self.fc6 = nn.Linear(h_dim2, h_dim1)
+        self.fc7 = nn.Linear(h_dim1, x_dim)
 
         #################
 
@@ -52,7 +60,12 @@ class VAE(nn.Module):
         """
         ## TODO: Implement encoder
         # Both outputs should be of shape batch_size x z_dim
-        pass
+        flattened_x = x.view(x.size(0), -1)
+        penultimate_layer = self.relu(self.fc2(self.relu(self.fc1(flattened_x))))
+        variance = self.fc3(penultimate_layer)
+        mean = self.fc4(penultimate_layer)
+
+        return mean, variance
 
         #################
 
@@ -62,7 +75,7 @@ class VAE(nn.Module):
         """
         ## TODO: Implement decoder
         # Output should be of shape batch_size x 784
-        pass
+        return self.relu(self.fc7(self.relu(self.fc6(self.relu(self.fc5(z))))))
 
         #################
 
@@ -73,14 +86,19 @@ class VAE(nn.Module):
         Sample noise form a standard Gaussian and then compute the latent
         vector by adding the mean and multiplying by the standard deviation
         """
+        
+
         ## TODO: Implement sample
-        pass
+        std_dev = torch.exp(0.5 * log_var)
+        return mu + torch.randn_like(mu) * std_dev
 
         #################
 
     def forward(self, x):
         ## TODO: Implement forward
-        pass
+        
+        mu, log_var = self.encoder(x)
+        output = self.decoder(self.sample(mu, log_var))
 
         #################
         return output, mu, log_var
@@ -90,7 +108,11 @@ class VAE(nn.Module):
 # return reconstruction error + KL divergence losses
 def loss_function(recon_x, x, mu, log_var):
     ## TODO: Implement the loss function
-    pass
+    bce = F.binary_cross_entropy(recon_x, x, reduction='sum')
+
+    kld = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+
+    return bce + kld
 
 
 ####### Sample Images ########

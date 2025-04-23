@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -143,14 +144,15 @@ class ViT(nn.Module):
             dim=d_model,
         )
         self.dropout = nn.Dropout(p)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=num_heads,
+            dim_feedforward=d_ff,
+            dropout=p,
+            batch_first=True
+        )
         self.encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(
-                d_model=d_model,
-                nhead=num_heads,
-                dim_feedforward=d_ff,
-                dropout=p,
-                activation="gelu",
-            ),
+            encoder_layer,
             num_layers=num_layers,
         )
         self.output_ln = nn.LayerNorm(d_model)

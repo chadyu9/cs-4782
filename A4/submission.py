@@ -44,7 +44,7 @@ class VAE(nn.Module):
         ## TODO: Implement __init__
 
         self.relu = nn.ReLU()
-        self.fc1 = nn.Linear(x_dim,h_dim1)
+        self.fc1 = nn.Linear(x_dim, h_dim1)
         self.fc2 = nn.Linear(h_dim1, h_dim2)
         self.fc3 = nn.Linear(h_dim2, z_dim)
         self.fc4 = nn.Linear(h_dim2, z_dim)
@@ -86,7 +86,6 @@ class VAE(nn.Module):
         Sample noise form a standard Gaussian and then compute the latent
         vector by adding the mean and multiplying by the standard deviation
         """
-        
 
         ## TODO: Implement sample
         std_dev = torch.exp(0.5 * log_var)
@@ -96,7 +95,7 @@ class VAE(nn.Module):
 
     def forward(self, x):
         ## TODO: Implement forward
-        
+
         mu, log_var = self.encoder(x)
         output = self.decoder(self.sample(mu, log_var))
 
@@ -108,9 +107,9 @@ class VAE(nn.Module):
 # return reconstruction error + KL divergence losses
 def loss_function(recon_x, x, mu, log_var):
     ## TODO: Implement the loss function
-    bce = F.binary_cross_entropy(recon_x, x, reduction='sum')
+    bce = F.binary_cross_entropy(recon_x, x, reduction="sum")
 
-    kld = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    kld = -0.5 * torch.sum(log_var - mu.pow(2) - log_var.exp())
 
     return bce + kld
 
@@ -119,7 +118,8 @@ def loss_function(recon_x, x, mu, log_var):
 def sample_images(model, num_samples):
     with torch.no_grad():
         ## TODO: Sample num_samples images from the model
-        pass
+        z = torch.randn(num_samples, model.fc5.in_features).to(model.fc5.weight.device)
+        return model.decoder(z)
 
 
 ######################################

@@ -131,9 +131,9 @@ def cosine_schedule(t, clip_min=1e-9):
     Maps the time, t, to alpha_2
     """
     ## TODO: implement function
-
-    #################
-    pass
+    alpha_2 = 0.5 * (1 + math.cos(t * math.pi))  # cosine schedule
+    alpha_2 = torch.clamp(alpha_2, min=clip_min)
+    return alpha_2
 
 
 def predict_start_from_noise(z_t, alpha2, pred_noise, clamp_min=1e-8):

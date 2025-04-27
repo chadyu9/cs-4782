@@ -131,9 +131,7 @@ def cosine_schedule(t, clip_min=1e-9):
     Maps the time, t, to alpha_2
     """
     ## TODO: implement function
-    alpha_2 = 0.5 * (1 + math.cos(t * math.pi))  # cosine schedule
-    alpha_2 = torch.clamp(alpha_2, min=clip_min)
-    return alpha_2
+    return torch.clamp(torch.cos(torch.tensor(0.5 * t * math.pi)).pow(2), min=clip_min)
 
 
 def predict_start_from_noise(z_t, alpha2, pred_noise, clamp_min=1e-8):
@@ -142,8 +140,9 @@ def predict_start_from_noise(z_t, alpha2, pred_noise, clamp_min=1e-8):
     """
     alpha2 = right_pad_dims_to(z_t, alpha2)
     ## TODO: implement function
-
-    #################
+    return (z_t - (1 - alpha2).sqrt() * pred_noise) / (
+        torch.clamp(alpha2.sqrt(), min=clamp_min)
+    )
 
 
 class GaussianDiffusion(nn.Module):
@@ -207,8 +206,8 @@ class GaussianDiffusion(nn.Module):
 
             # Compute diffusion model prediction
             model_output = self.diffusion_model_predictions(z_t, time)
-            # get alpha sigma of time and next time
 
+            # get alpha sigma of time and next time
             alpha2 = self.alpha2_schedule(time)
             alpha2_next = self.alpha2_schedule(time_next)
             alpha2, alpha2_next = map(
@@ -216,8 +215,11 @@ class GaussianDiffusion(nn.Module):
             )
 
             ## TODO: implement function
-
-            #################
+            # Compute the next sample
+            z_t = (
+                alpha2_next.sqrt() * model_output.pred_x_start
+                + (1 - alpha2_next).sqrt() * model_output.pred_noise
+            )
 
         return z_t, np.stack(intermediate_samples, axis=1)
 
@@ -240,15 +242,17 @@ class GaussianDiffusion(nn.Module):
         device = point_coords.device
 
         # sample random times
-
         times = torch.zeros((batch,), device=device).float().uniform_(0, 1.0)
-        # noise sample
 
+        # noise sample
         noise = torch.randn_like(point_coords)
 
         alpha2 = self.alpha2_schedule(times)
         alpha2 = right_pad_dims_to(point_coords, alpha2)
 
         ## TODO: implement function
+        z_t = alpha2.sqrt() * point_coords + (1 - alpha2).sqrt() * noise
+        pred_noise, _ = self.diffusion_model_predictions(z_t, times)
+        loss = F.mse_loss(pred_noise, noise, reduction="mean")
 
-        #################
+        return loss

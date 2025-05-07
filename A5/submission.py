@@ -67,7 +67,12 @@ def sample_action(Q, s, env, epsilon):
     """
     ### TODO 1:
     # Return action index from Q table with epsilon-greedy exploration.
-    pass
+    if random.random() < epsilon:
+        # Exploration: choose a random action
+        return env.action_space.sample()
+    else:
+        # Exploitation: choose the best action from Q table
+        return np.argmax(Q[s])
 
 def q_update(Q, s, a, reward, s_next, alpha, gamma):
     """
@@ -83,7 +88,12 @@ def q_update(Q, s, a, reward, s_next, alpha, gamma):
     """
     ### TODO 2:
     # Return updated Q-Table with new knowledge
-    pass
+    # Q-learning update formula: Q(s,a) = Q(s,a) + alpha * [r + gamma * max_a'(Q(s',a')) - Q(s,a)]
+    max_future_q = np.max(Q[s_next])
+    current_q = Q[s][a]
+    new_q = current_q + alpha * (reward + gamma * max_future_q - current_q)
+    Q[s][a] = new_q
+    return Q
 
 def q_learning(Q, env, epsilon, alpha, gamma, epis):
     """
@@ -104,22 +114,31 @@ def q_learning(Q, env, epsilon, alpha, gamma, epis):
         # Complete the Q-learning algorithm by filling in the TODOs.
         # You can reuse the code from the q_update and sample_action.
 
-        # TODO: Reset environment
+        # Reset environment
+        state, _ = env.reset()
+        total_reward = 0
+        terminated = False
+        truncated = False
 
         # NOTE: An episode is one iteration of the while loop (one trajectory)
-        while True:
+        while not (terminated or truncated):
+            # Choose action from Q table with epsilon-greedy exploration
+            action = sample_action(Q, state, env, epsilon)
 
-            # TODO: Choose action from Q table with epsilon-greedy exploration.
+            # Get new state & reward from environment
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            
+            # Update Q-Table with new knowledge
+            Q = q_update(Q, state, action, reward, next_state, alpha, gamma)
+            
+            # Update state
+            state = next_state
+            
+            # Add reward to total
+            total_reward += reward
 
-            # TODO: Get new state & reward from environment
-
-            # TODO: Update Q-Table with new knowledge
-
-            # TODO: Update state
-
-            # TODO: If terminated or truncated, break out of the loop
-                break
-        # TODO: Append total reward for the episode
+        # Append total reward for the episode
+        rewards_per_episode.append(total_reward)
 
         # Print progress every 100 episodes
         if (i + 1) % 100 == 0:
@@ -144,15 +163,17 @@ class DQN(nn.Module):
 
         ### TODO 4: 
         # Define the linear layers
-
-        pass
+        self.layer1 = nn.Linear(n_observations, 128)
+        self.layer2 = nn.Linear(128, 128)
+        self.layer3 = nn.Linear(128, n_actions)
 
     def forward(self, x):
-
         ### TODO 5: 
         # Define the forward pass
-
-        pass
+        x = F.relu(self.layer1(x))
+        x = F.relu(self.layer2(x))
+        x = self.layer3(x)
+        return x
         
         
 #-------------------------------#
@@ -203,8 +224,14 @@ class DQNAgent:
         ### TODO 6: 
         # Implement the epsilon-greedy strategy with the eps_threshold
         # Remember to wrap the result in a (1,1) tensor and move it to the correct device.
-
-        pass
+        if sample > eps_threshold:
+            # Exploitation: choose the best action from policy network
+            with torch.no_grad():
+                # Return the action with the highest Q-value
+                return torch.tensor([[self.policy_net(state).argmax()]], device=self.device, dtype=torch.long)
+        else:
+            # Exploration: choose a random action
+            return torch.tensor([[random.randrange(self.n_actions)]], device=self.device, dtype=torch.long)
 
     def get_values(self):
         """
@@ -261,9 +288,11 @@ class DQNAgent:
 
         ### TODO 7: 
         # Compute the target state_action_values with the Bellman Equation
+        expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
         ### TODO 8: 
         # Compute the loss between the predicted state_action_values and the target state_action_values using the SmoothL1Loss
+        loss = self.criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -289,6 +318,9 @@ class PolicyNetwork(nn.Module):
 
         ### TODO 9: 
         # Define the linear layers and non-linearities
+        self.fc1 = nn.Linear(number_observation_features, self.hidden_layer_features)
+        self.fc2 = nn.Linear(self.hidden_layer_features, number_actions)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """Forward pass through the network.
@@ -301,8 +333,10 @@ class PolicyNetwork(nn.Module):
         """
         ### TODO 10: 
         # Pass through the linear layers and non-linearities
-
-        pass 
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        x = self.softmax(x)
+        return x
         
 
 #----------------------------------------#
@@ -336,8 +370,15 @@ class ReinforceAgent:
         #   (c.f. Categorical from torch.distributions)
         # Sample an action and return a tuple of it and its logprob
         ###
-
-        pass
+        action_probs = self.model(state)
+        # Create a categorical distribution
+        dist = Categorical(action_probs)
+        # Sample an action from the distribution
+        action = dist.sample()
+        # Get the log probability of the chosen action
+        log_prob = dist.log_prob(action)
+        
+        return action.item(), log_prob
 
     def calculate_reinforce_loss(self, log_probs, returns):
         """
@@ -357,8 +398,15 @@ class ReinforceAgent:
         # Multiply the negative log probs with the advantage to obtain per-action losses
         # Return the mean loss over actions
         ###
-
-        pass
+        # Calculate advantage by subtracting the mean of returns (baseline)
+        advantage = returns - returns.mean()
+        
+        # Calculate policy loss: negative log probability * advantage
+        # Negative because we want to maximize the objective (gradient ascent)
+        policy_loss = -(log_probs * advantage)
+        
+        # Return the mean loss
+        return policy_loss.mean()
 
 
 def calculate_discounted_returns(episode_rewards, gamma):
@@ -378,6 +426,15 @@ def calculate_discounted_returns(episode_rewards, gamma):
     ### TODO 13:
     # Be careful to follow the instructions in the notebook. 
     # It's possible to get this wrong but still return a learnable signal.
-
-    pass
+    
+    # Process rewards in reverse order to calculate returns efficiently
+    for reward in reversed(episode_rewards):
+        # Calculate the discounted return with the Bellman equation
+        # G_t = r_t + gamma * G_{t+1}
+        discounted_return = reward + gamma * discounted_return
+        # Insert at the beginning to maintain correct order
+        discounted_returns.insert(0, discounted_return)
+        
+    # Convert to tensor for further processing
+    return torch.tensor(discounted_returns)
 
